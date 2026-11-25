@@ -1,154 +1,108 @@
 export const CASE = {
-  organisation: 'Northstar Workspace',
-  title: 'The Unseen Organisation',
-  premise: 'Four teams are meeting their targets. Their notes may be describing one unmet customer need.',
-  sampleNotice: 'Fictional company, synthetic records and illustrative metrics. This deliberately selected case demonstrates an interpretation; it does not establish customer demand or measured AI performance.',
-  period: 'October 2026 · fictional monthly snapshot',
-  departments: [
-    { id: 'sales', name: 'Sales', metric: 'New memberships', value: '108', target: 'Target: 100', note: 'Illustrative acquisition target met. This says nothing about why existing members leave.' },
-    { id: 'support', name: 'Support', metric: 'Replies within one day', value: '96%', target: 'Target: 95%', note: 'Illustrative response target met. A quick reply can still leave the underlying need unresolved.' },
-    { id: 'operations', name: 'Operations', metric: 'Bookings honoured', value: '99%', target: 'Target: 98%', note: 'Illustrative delivery target met. The measure covers booked workspace, not flexibility between subscriptions.' },
-    { id: 'finance', name: 'Finance', metric: 'Credits processed in five days', value: '97%', target: 'Target: 95%', note: 'Illustrative processing target met. The reason for repeated adjustments is a separate question.' }
+  title: 'Make Yes Safer',
+  organisation: 'Northstar Components',
+  premise: 'One urgent payment. Two possible realities. Can your controls tell them apart without losing the legitimate opportunity?',
+  methodNotice: 'A fictional, deterministic thought experiment with prepared AI-assisted scenarios. No live model calls, real payments or measured risk probabilities.',
+  assumptions: [
+    'Every request has consistent-looking invoice and email records. The baseline approver accepts those records; this is a chosen weak process, not a claim about all approval controls.',
+    'Steps run sequentially: primary approval, any required bank verification, then any extra approval. Real timing and parallel work may differ.',
+    'An available approver takes 10 minutes. Waiting for an unavailable approver takes 90 minutes. A pre-authorised deputy restores the 10-minute approval step.',
+    'An additional approver takes 25 minutes and reads the same records. In this model they obtain no independent distinguishing evidence.',
+    'Independent bank checking uses a separately held, previously validated contact and checks both the specific payment request and the new account details. A matching response is an observation, not guaranteed truth.',
+    'A blanket hold defers every changed-bank request by 1,440 minutes. A hold does not release money in this model.',
+    'A legitimate request creates the illustrated opportunity only if it is released by the stated cutoff. A diversion released after a cutoff is still a dangerous release.',
+    'Scenario labels are known to the exercise author for classifying outcomes. The decision engine cannot use the legitimate/diversion label to decide what to do.',
+    'The eight cases are deliberately selected, synthetic and prepared in advance. Counts describe these cases only; they are not real-world probabilities, coverage, assurance or an independent evaluation.'
   ],
-  evidence: [
-    {
-      id: 'E01', department: 'sales', source: 'Cancellation call note', date: '2026-10-02',
-      title: 'Leaving for now',
-      body: 'Member A is working from a client office for six weeks. They said: “I like the space, but I cannot pay for two places while I am away. I would come back if I could stop the membership for a while.” Cancellation processed.',
-      excerpt: 'I would come back if I could stop the membership for a while.',
-      role: 'support', relationship: 'Temporary absence expressed as a cancellation',
-      explanation: 'This individual describes a time-limited need rather than dissatisfaction with the workspace. A pause is a plausible response, not a demonstrated retention outcome.'
-    },
-    {
-      id: 'E02', department: 'support', source: 'Member support ticket', date: '2026-10-04',
-      title: 'A resolved ticket, an unresolved need',
-      body: 'Member B asked whether billing could stop during eight weeks of family travel. They wrote: “Nothing is wrong with the space or the team. I just will not be in town.” Support confirmed that the current options are to retain or cancel the membership. Ticket resolved within the response target.',
-      excerpt: 'Nothing is wrong with the space or the team. I just will not be in town.',
-      role: 'support', relationship: 'Service satisfaction coexists with a need to leave temporarily',
-      explanation: 'The ticket supports a flexibility hypothesis and challenges a blanket poor-service explanation. Resolving the request procedurally did not create the option the member wanted.'
-    },
-    {
-      id: 'E03', department: 'operations', source: 'Operations handover', date: '2026-10-06',
-      title: 'The workaround already exists',
-      body: 'For three members on short client placements, staff have arranged informal holds and added calendar reminders to check when they return. There is no standard hold product or shared restart process. These exceptions should be reviewed before anyone promises a reserved desk throughout an absence.',
-      excerpt: 'staff have arranged informal holds and added calendar reminders to check when they return.',
-      role: 'support', relationship: 'A repeated workaround may reveal a missing service option',
-      explanation: 'People are already improvising around temporary absence. That is a signal worth investigating, but the record also raises delivery and capacity questions.'
-    },
-    {
-      id: 'E04', department: 'finance', source: 'Credit review note', date: '2026-10-08',
-      title: 'Different ledger, similar story',
-      body: 'Three adjustments in this selected review relate to members who were away on temporary assignments and later restarted. The adjustment reasons are recorded as unused period, goodwill and restart correction. These labels do not identify whether the original request was for a temporary pause.',
-      excerpt: 'members who were away on temporary assignments and later restarted.',
-      role: 'support', relationship: 'Financial exceptions may be another trace of the same need',
-      explanation: 'The note connects absence, adjustments and return. It does not establish that every credit was avoidable or that a pause would have been profitable.'
-    },
-    {
-      id: 'E05', department: 'sales', source: 'Win-back conversation', date: '2026-10-09',
-      title: 'A return that needed a workaround',
-      body: 'Former member C asked to restart after a two-month project elsewhere. They said: “Could I keep the same account next time instead of cancelling and joining again?” They are interested in hearing about a temporary suspension option. No purchase commitment or price preference was recorded.',
-      excerpt: 'Could I keep the same account next time instead of cancelling and joining again?',
-      role: 'support', relationship: 'Returning demand is expressed in administrative language',
-      explanation: 'The request is consistent with a pause need. Interest in an option is not evidence of willingness to pay for it.'
-    },
-    {
-      id: 'E06', department: 'support', source: 'Escalated support note', date: '2026-10-11',
-      title: 'The friction is in the boundary',
-      body: 'Member D was transferred between billing and the local workspace team while asking for a month away. They described the handoffs as frustrating, but said the workspace itself suited them. Support offered cancellation because there was no agreed hold process.',
-      excerpt: 'transferred between billing and the local workspace team while asking for a month away.',
-      role: 'support', relationship: 'A service problem may be a symptom of a missing option',
-      explanation: 'This supports both a service-friction hypothesis and the need to investigate a pause option. It does not establish which change would resolve the member’s concern.'
-    },
-    {
-      id: 'E07', department: 'sales', source: 'Cancellation call note', date: '2026-10-12',
-      title: 'Some members really mean goodbye',
-      body: 'Member E cancelled because their ongoing budget no longer covers the monthly fee. They said working from home is cheaper and they do not expect to restart. They declined a discussion about temporarily suspending the membership.',
-      excerpt: 'they do not expect to restart.',
-      role: 'counter', relationship: 'A genuine price cancellation challenges a universal pause explanation',
-      explanation: 'A pause would not necessarily address an ongoing affordability issue. The emerging idea should not be used to reinterpret every cancellation.'
-    },
-    {
-      id: 'E08', department: 'finance', source: 'Evidence selection note', date: '2026-10-13',
-      title: 'This is a selected sample',
-      body: 'These records were assembled to explore temporary absences and restart activity. They are not a random sample of members or cancellations. The set cannot establish how common the need is, whether a pause would change behaviour, or whether it would be economically sustainable.',
-      excerpt: 'They are not a random sample of members or cancellations.',
-      role: 'counter', relationship: 'Selection limits what the pattern can establish',
-      explanation: 'Several aligned stories can make a useful hypothesis without making it representative. A wider investigation may overturn the initial impression.'
-    },
-    {
-      id: 'E09', department: 'operations', source: 'Member exit handover', date: '2026-10-14',
-      title: 'A permanent move',
-      body: 'Member F is relocating permanently to a region where Northstar has no workspace. Their local team recorded positive feedback about the service. There is no planned return and no request to retain a membership.',
-      excerpt: 'There is no planned return and no request to retain a membership.',
-      role: 'counter', relationship: 'A satisfied customer can still leave for a reason a pause cannot solve',
-      explanation: 'This challenges both a universal poor-service story and a universal pause story. Different departures can have different causes.'
-    }
+  controls: [
+    {id: 'independentCheck', title: 'Verify through an established contact', description: 'For a changed account, confirm this request and its bank details through a separately held, previously validated contact. Hold if the response conflicts or cannot be obtained.', tradeoff: 'Adds verification time. It depends on the trusted contact route remaining trustworthy.'},
+    {id: 'deputy', title: 'Use a pre-authorised deputy', description: 'When the usual approver is absent, a deputy with the same authority can perform the approval step.', tradeoff: 'Reduces the modelled wait from 90 to 10 minutes. It adds no evidence of authenticity.'},
+    {id: 'extraApproval', title: 'Add another approver', description: 'A second person reviews the same email and invoice records after the earlier steps.', tradeoff: 'Adds 25 minutes. More reviewers do not create independent evidence in this model.'},
+    {id: 'blanketHold', title: 'Hold every account change', description: 'Defer every changed-bank request until the following day, regardless of the other selected controls.', tradeoff: 'Stops the modelled diversions that change accounts, and also misses every legitimate same-day account-change cutoff.'}
   ],
-  hypotheses: [
+  openingIds: ['S01', 'S02'],
+  coreIds: ['S01', 'S02', 'S03', 'S04', 'S07', 'S08'],
+  challengeIds: ['S05', 'S06'],
+  scenarios: [
     {
-      id: 'price', title: 'The price is wrong',
-      summary: 'Price explains at least one departure. It is not a complete account of these selected records.',
-      supports: ['E07', 'N01'], counters: ['E02', 'E05'],
-      rules: [
-        { requiresAll: ['N01'], summary: 'The wider fictional survey makes price a more prominent explanation among respondents. Response bias remains possible, and the smaller pause-related cases do not disappear.' },
-        { requiresAll: ['E07'], summary: 'One member explicitly describes an ongoing affordability problem. Other records concern temporary absence, so one blanket explanation would erase meaningful differences.' },
-        { requiresAll: [], summary: 'A price explanation is possible, but the active evidence has not yet established it.' }
-      ]
+      id: 'S01', title: 'The real supplier', pair: 'same-request', group: 'opening', legitimate: true,
+      request: 'Please release payment to our new bank account today. The shipment slot closes in 60 minutes. The invoice and account-change email agree.',
+      publicFacts: ['Existing supplier; changed bank details', 'Invoice and email agree', 'Usual approver unavailable', 'Shipment cutoff in 60 minutes'],
+      truth: 'The supplier really changed its bank account. The established contact can independently confirm this payment and the new details.',
+      impact: 'An on-time release preserves the fictional shipment slot. A late release or hold misses it.',
+      cutoffMinutes: 60, approverAvailable: false, changedBank: true,
+      verification: {outcome: 'match', minutes: 15, detail: 'The separately held contact confirms this request and the new account details.'}
     },
     {
-      id: 'service', title: 'The service is failing',
-      summary: 'There is evidence of frustrating handoffs, alongside positive feedback about the workspace itself.',
-      supports: ['E06', 'N03'], counters: ['E02', 'E09'],
-      rules: [
-        { requiresAll: ['E06', 'N03'], summary: 'Frustrating handoffs and an unsupported billing workflow point to operational friction. They do not establish that the core workspace service is broadly failing.' },
-        { requiresAll: ['E06'], summary: 'One member describes frustrating handoffs. Positive service comments elsewhere suggest that friction around a missing option deserves separate investigation.' },
-        { requiresAll: [], summary: 'Poor service is a possible explanation, but the active evidence does not yet establish it.' }
-      ]
+      id: 'S02', title: 'The lookalike diversion', pair: 'same-request', group: 'opening', legitimate: false,
+      request: 'Please release payment to our new bank account today. The shipment slot closes in 60 minutes. The invoice and account-change email agree.',
+      publicFacts: ['Existing supplier; changed bank details', 'Invoice and email agree', 'Usual approver unavailable', 'Shipment cutoff in 60 minutes'],
+      truth: 'A compromised supplier email account supplied the invoice and change request. The real supplier denies the request when reached through the established contact.',
+      impact: 'Releasing the request sends money to the wrong account. A hold prevents this modelled diversion.',
+      cutoffMinutes: 60, approverAvailable: false, changedBank: true,
+      verification: {outcome: 'mismatch', minutes: 15, detail: 'The separately held contact denies the request and the proposed account.'}
     },
     {
-      id: 'pause', title: 'Some customers need a pause',
-      summary: 'Temporary absence, informal holds, credits and restart requests may be different descriptions of one unmet need.',
-      supports: ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'N02'], counters: ['E07', 'E08', 'E09', 'N01'],
-      rules: [
-        { requiresAll: ['N01', 'N02', 'N03'], summary: 'The picture becomes more specific: a selected group expresses interest, wider survey evidence challenges broad demand, and delivery constraints remain. A bounded pause hypothesis survives; a universal solution does not.' },
-        { requiresAll: ['N01', 'N03'], summary: 'The wider survey weakens the idea of broad demand. Operational constraints also make the proposed service more complicated. A niche need remains plausible, without establishing feasibility or commercial benefit.' },
-        { requiresAll: ['N01', 'N02'], summary: 'Selected customers express interest, while the wider survey suggests this may be a niche rather than the main cause of cancellations. Both observations can be true.' },
-        { requiresAll: ['N01'], summary: 'The wider survey challenges the apparent scale of the opportunity. The selected stories still suggest a possible niche, but they should not stand in for the whole customer base.' },
-        { requiresAll: ['N02', 'N03'], summary: 'There is additional interest among customers already selected for temporary absences, but the product would need workable billing and capacity rules. Interest has not established viability.' },
-        { requiresAll: ['N03'], summary: 'A pause need remains plausible, but the operational note limits what could be promised. Evidence of demand and evidence of a deliverable service are different things.' },
-        { requiresAll: ['N02'], summary: 'The follow-up adds interest within a deliberately selected group. It strengthens the case for exploring that group’s need, without establishing market size, take-up or financial benefit.' },
-        { requiresAll: ['E01', 'E03', 'E04', 'E05'], summary: 'Several teams may be describing the same temporary-absence need in different language. This is a hypothesis worth investigating, tempered by genuine price and relocation exits and the selected sample.' },
-        { requiresAll: [], summary: 'A temporary-pause need is a possibility. Connect relevant records and examine the alternatives before treating it as an opportunity.' }
-      ]
-    }
-  ],
-  newEvidence: [
-    {
-      id: 'N01', department: 'sales', source: 'Wider exit survey', date: '2026-10-21',
-      title: 'The wider picture pushes back',
-      body: 'In this fictional follow-up, 200 recent cancellations were invited to a survey and 136 replied. Six respondents named temporary absence as their main reason, 81 named ongoing cost and 49 named other reasons. Non-respondents may differ. The survey did not test a specific pause offer or willingness to pay.',
-      excerpt: 'Six respondents named temporary absence as their main reason, 81 named ongoing cost and 49 named other reasons.',
-      role: 'counter', relationship: 'Broader evidence challenges the apparent prevalence of the pause need',
-      explanation: 'This should reduce confidence in a broad pause opportunity. It does not prove that no useful niche exists, and survey response bias remains unresolved.',
-      impact: 'Challenges the scale of the pause hypothesis; strengthens price as an explanation among respondents.'
+      id: 'S03', title: 'The tight but workable window', group: 'core', legitimate: true,
+      request: 'Our confirmed account change is ready. Payment must clear the release desk within 45 minutes to keep today’s dispatch.',
+      publicFacts: ['Existing supplier; changed bank details', 'Usual approver available', 'Established contact takes 25 minutes to reach', 'Dispatch cutoff in 45 minutes'],
+      truth: 'The change is genuine. The known contact can verify it, but an additional sequential approval consumes the remaining window.',
+      impact: 'The shipment slot is preserved only if release occurs within 45 minutes.',
+      cutoffMinutes: 45, approverAvailable: true, changedBank: true,
+      verification: {outcome: 'match', minutes: 25, detail: 'The known contact confirms the request and account after a 25-minute callback process.'}
     },
     {
-      id: 'N02', department: 'support', source: 'Targeted member follow-up', date: '2026-10-22',
-      title: 'Interest, with a selection caveat',
-      body: 'In this fictional follow-up, staff contacted 15 members whose notes explicitly mentioned temporary travel or client placements. Eleven asked to hear about a possible pause pilot. No payment was taken and no member committed to participate. This deliberately targeted group is not representative of all customers.',
-      excerpt: 'Eleven asked to hear about a possible pause pilot.',
-      role: 'support', relationship: 'Targeted interest supports a narrower customer need',
-      explanation: 'The record adds evidence of interest in the selected segment. It does not establish take-up, willingness to pay, retention impact or financial return.',
-      impact: 'Supports further exploration of a defined segment, without proving a broad opportunity.'
+      id: 'S04', title: 'Two reviewers, one compromised story', group: 'core', legitimate: false,
+      request: 'The invoice and account-change confirmation are attached. Both show the same new bank details. Please approve within 90 minutes.',
+      publicFacts: ['Existing supplier; changed bank details', 'Two matching documents from the same email chain', 'Usual approver available', 'Requested cutoff in 90 minutes'],
+      truth: 'Both matching documents came from the same compromised source. A second reviewer sees the same convincing story. The established contact rejects the change.',
+      impact: 'Releasing the request creates a diversion. A hold prevents it within this case.',
+      cutoffMinutes: 90, approverAvailable: true, changedBank: true,
+      verification: {outcome: 'mismatch', minutes: 15, detail: 'The established contact reports that neither the request nor the new bank details are theirs.'}
     },
     {
-      id: 'N03', department: 'operations', source: 'Feasibility review', date: '2026-10-23',
-      title: 'A need is not yet a workable service',
-      body: 'The current billing platform does not support automatic suspension and restart. Reserving the same desk throughout an unpaid pause would also constrain capacity. A different offer might allow a member to retain their account and request a new desk on return, subject to availability. No delivery commitment, cost estimate or launch decision has been made.',
-      excerpt: 'Reserving the same desk throughout an unpaid pause would also constrain capacity.',
-      role: 'context', relationship: 'Operational constraints qualify the proposed response',
-      explanation: 'This is a constraint on the solution, not proof against the underlying need. The opportunity would have to be defined and tested within real billing and capacity limits.',
-      impact: 'Adds feasibility questions; does not by itself confirm or refute demand.'
+      id: 'S05', title: 'The genuine request nobody can verify in time', group: 'challenge', legitimate: true,
+      request: 'The account change is genuine and the shipment closes in an hour, but our authorised contact cannot be reached before the cutoff.',
+      publicFacts: ['Existing supplier; changed bank details', 'Usual approver unavailable', 'No reachable established contact during the window', 'Shipment cutoff in 60 minutes'],
+      truth: 'The request is legitimate, but the selected process has no reliable independent route available in time. Knowing the exercise label does not give the payment team that evidence.',
+      impact: 'A verification-based hold misses a legitimate shipment. This model contains no additional trustworthy route that can resolve the uncertainty in time.',
+      cutoffMinutes: 60, approverAvailable: false, changedBank: true,
+      verification: {outcome: 'unavailable', minutes: 30, detail: 'After 30 minutes, no confirmation from an established contact can be obtained in the available window.'}
+    },
+    {
+      id: 'S06', title: 'The inherited trust failure', group: 'challenge', legitimate: false,
+      request: 'Please use the new account. Your saved contact can confirm this request and the account details before the 60-minute cutoff.',
+      publicFacts: ['Existing supplier; changed bank details', 'Usual approver available', 'Separately held contact provides matching confirmation', 'Requested cutoff in 60 minutes'],
+      truth: 'The contact record was corrupted after its last validation. The callback reaches an attacker who confirms the request. The control obtains a matching answer through a route it wrongly assumes is still trustworthy.',
+      impact: 'The diversion can survive the independent-check design. The case exposes an inherited trust assumption; the supplied controls do not resolve it while preserving all legitimate changed-bank payments.',
+      cutoffMinutes: 60, approverAvailable: true, changedBank: true,
+      verification: {outcome: 'match', minutes: 15, detail: 'The separately held contact returns a matching confirmation. In this challenge, the stored contact route is no longer trustworthy.'}
+    },
+    {
+      id: 'S07', title: 'The ordinary payment', group: 'core', legitimate: true,
+      request: 'Please pay the agreed invoice to the existing approved account within 45 minutes so we can release the shipment.',
+      publicFacts: ['Existing supplier; unchanged approved bank details', 'Usual approver available', 'No account change to verify', 'Shipment cutoff in 45 minutes'],
+      truth: 'This is a legitimate invoice using unchanged bank details. The changed-bank controls do not apply.',
+      impact: 'An on-time payment preserves the shipment. Controls added to every request still consume time.',
+      cutoffMinutes: 45, approverAvailable: true, changedBank: false,
+      verification: {outcome: 'match', minutes: 0, detail: 'No changed-bank verification is required by the selected rule.'}
+    },
+    {
+      id: 'S08', title: 'Urgency without a reachable contact', group: 'core', legitimate: false,
+      request: 'Please process the new account now. Nobody on your established contact list is available, but the invoice is due within three hours.',
+      publicFacts: ['Existing supplier; changed bank details', 'Usual approver unavailable', 'No reachable established contact during the window', 'Requested cutoff in 180 minutes'],
+      truth: 'The requested change is a diversion. The available evidence cannot obtain confirmation through the established route; a rule requiring that evidence holds the payment.',
+      impact: 'A hold prevents this modelled diversion. Having more time does not make an unverified request authentic.',
+      cutoffMinutes: 180, approverAvailable: false, changedBank: true,
+      verification: {outcome: 'unavailable', minutes: 30, detail: 'No confirmation through the established route is available after the 30-minute attempt.'}
     }
   ]
 };
+
+export const CATEGORY_META = {
+  'justified-yes': {title: 'Legitimate, on time', description: 'A legitimate request was released within its modelled cutoff. This retrospective outcome is not proof that the decision was well supported.'},
+  'dangerous-yes': {title: 'Dangerous yes', description: 'A modelled diversion was released, even if the stated cutoff had passed.'},
+  'missed-legitimate': {title: 'Legitimate opportunity missed', description: 'A legitimate request was held or released after its modelled cutoff. This is not automatically an avoidable loss.'},
+  'protective-hold': {title: 'Protective hold', description: 'The modelled diversion was not released.'}
+};
+

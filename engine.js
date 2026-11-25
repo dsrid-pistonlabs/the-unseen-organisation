@@ -1,68 +1,126 @@
-import { CASE } from './data.js';
+import { CASE, CATEGORY_META } from './data.js';
 
-export const records = [...CASE.evidence, ...CASE.newEvidence];
-export const recordById = new Map(records.map(record => [record.id, record]));
-export const experiments = {
-  interviews: {title: 'Interview former members', short: 'Test whether temporary interruption drove their decision.', question: 'When does a temporary interruption become a permanent cancellation?', action: 'Speak with members whose notes mention absence, alongside people who left for other reasons. Ask about their decision before presenting a pause offer.', learn: 'Separate an unmet need from a reaction to an attractive suggestion. Look for accounts that contradict the initial interpretation.'},
-  pilot: {title: 'Design a small pause pilot', short: 'Test actual take-up, constraints and return behaviour.', question: 'Would a workable pause option change what a defined group actually does?', action: 'First resolve billing, capacity and return conditions. Then design a limited, voluntary pilot with explicit measures and a suitable comparison.', learn: 'Observe take-up, return behaviour, delivery effort and commercial effects. Expressions of interest alone do not answer these questions.'},
-  sample: {title: 'Audit a broader sample', short: 'Check how often this pattern occurs, and where it does not.', question: 'How often does the apparent need occur outside this selected set?', action: 'Review a broader set of cancellations and continuing memberships. Preserve other reasons and record how the sample was chosen.', learn: 'Estimate the reach and limits of the pattern. Track missing information and sampling limitations rather than treating silence as absence.'}
-};
+export const DEFAULT_CONTROLS = Object.freeze({independentCheck: false, deputy: false, extraApproval: false, blanketHold: false});
+export const scenarioById = new Map(CASE.scenarios.map(scenario => [scenario.id, scenario]));
 
-const investigationsByHypothesis = {
-  pause: experiments,
-  price: {
-    interviews: {title: 'Interview former members', short: 'Understand affordability, value and other reasons for leaving.', question: 'What did members mean when they said the price was too high?', action: 'Speak with former members who named cost and people who left for other reasons. Explore ongoing affordability, perceived value and changing workspace needs before proposing a different price.', learn: 'Distinguish a persistent budget constraint from dissatisfaction with value or a temporary absence. A lower price may address some reasons and leave others untouched.'},
-    pilot: {title: 'Test a viable pricing option', short: 'Test behaviour and commercial effects within workable economics.', question: 'Would a financially workable pricing option change decisions for a defined group?', action: 'First establish the costs and service conditions of a specific offer. Then design a limited, voluntary test with a suitable comparison and explicit measures of take-up, retention and financial contribution.', learn: 'Observe whether behaviour changes enough to justify the commercial effects. Stated interest in a cheaper option does not establish that the offer is sustainable.'},
-    sample: {title: 'Audit a broader sample', short: 'Check where price matters and where another explanation fits.', question: 'How widespread is price-related departure beyond these selected records?', action: 'Review a broader set of cancellations and continuing memberships. Distinguish ongoing affordability from temporary absence and other reasons, and document survey non-response and sample selection.', learn: 'Estimate which groups report price concerns without treating every departure as a pricing problem. A reported reason alone does not show that changing the price would change behaviour.'}
-  },
-  service: {
-    interviews: {title: 'Investigate the handoffs', short: 'Trace unresolved requests across teams and hear the member experience.', question: 'Where do handoffs turn a member request into avoidable friction?', action: 'Reconstruct selected requests with the member and the teams involved, including cases that went smoothly. Separate poor communication, unclear ownership and missing service options from dissatisfaction with the workspace itself.', learn: 'Identify which parts of the experience caused frustration and which constraints prevented resolution. A faster response alone may leave the underlying need unresolved.'},
-    pilot: {title: 'Design a service flow pilot', short: 'Test clearer ownership and resolution of a defined request type.', question: 'Would a clearer service flow improve resolution for a defined set of requests?', action: 'Choose a request type that the business can fulfil. Design a limited pilot with clear ownership, supported billing steps and a suitable comparison. Set measures for resolution, repeat contacts, member experience and staff effort.', learn: 'Observe whether the revised flow reduces friction without transferring work elsewhere. A smoother process cannot by itself create a service option the business cannot deliver.'},
-    sample: {title: 'Audit a broader sample', short: 'Check how often handoff friction occurs beyond these notes.', question: 'How common are frustrating handoffs across the wider service experience?', action: 'Review a broader set of resolved and unresolved requests, including different teams and request types. Examine member feedback alongside handoff counts and resolution outcomes, and record missing information.', learn: 'Estimate where friction occurs and whether it relates to service design, delivery or communication. Do not infer widespread service failure from a few difficult cases.'}
-  }
-};
-
-export function getExperiment(hypothesisId, experimentId) {
-  if (!Object.hasOwn(investigationsByHypothesis, hypothesisId)) throw new Error('Unknown hypothesis');
-  const investigations = investigationsByHypothesis[hypothesisId];
-  if (!Object.hasOwn(investigations, experimentId)) throw new Error('Unknown investigation');
-  return investigations[experimentId];
+export function normaliseControls(input = {}) {
+  return Object.fromEntries(Object.keys(DEFAULT_CONTROLS).map(id => [id, input[id] === true]));
 }
 
-export function analyse(activeIds, hypothesisId = 'pause') {
-  const active = new Set([...activeIds].filter(id => recordById.has(id)));
-  const hypothesis = CASE.hypotheses.find(h => h.id === hypothesisId);
-  if (!hypothesis) throw new Error('Unknown hypothesis');
-  const supports = hypothesis.supports.filter(id => active.has(id)).map(id => recordById.get(id));
-  const counters = hypothesis.counters.filter(id => active.has(id)).map(id => recordById.get(id));
-  const context = [...active].filter(id => !hypothesis.supports.includes(id) && !hypothesis.counters.includes(id)).map(id => recordById.get(id));
-  const matched = hypothesis.rules.find(rule => rule.requiresAll.every(id => active.has(id)));
-  let summary = matched?.summary || hypothesis.summary;
-  if (active.size === 0) summary = 'No records are included. There is no active evidence here from which to assess this interpretation.';
-  else if (supports.length === 0) summary = 'None of the included records is marked as supporting this interpretation. Examine the challenges and context before drawing a conclusion.';
-  else if (hypothesisId === 'price' && active.has('N01')) summary = 'The wider fictional survey identifies ongoing cost as the most commonly reported main reason among respondents. Non-respondents may differ, and the survey does not establish whether changing price would change their decisions.';
-  else if (hypothesisId === 'price' && !active.has('N01')) summary = 'An included member account explicitly describes an ongoing affordability problem. That supports price as an explanation for that member; it does not establish a general cause of departures.';
-  else if (hypothesisId === 'service' && !active.has('E06')) summary = 'The feasibility note describes an unsupported billing workflow. That is an operational constraint, not evidence that the workspace service is broadly failing.';
-  else if (hypothesisId === 'service' && !active.has('N03')) summary = 'An included member account describes frustrating handoffs around a requested absence. It supports investigating that experience, without establishing widespread service failure.';
-  else if (hypothesisId === 'pause' && !CASE.newEvidence.some(r => active.has(r.id))) {
-    summary = supports.length >= 3
-      ? 'Several included records describe temporary absence, workarounds or a return. They may point to a shared need for a pause option. The evidence establishes neither how widespread that need is nor whether a viable service would meet it.'
-      : 'A small number of included records suggests a temporary-absence need. That is a starting point for investigation, without establishing a broader pattern or a viable service.';
+function resolveScenario(value) {
+  const scenario = typeof value === 'string' ? scenarioById.get(value) : value;
+  if (!scenario || !scenario.id || !Number.isFinite(scenario.cutoffMinutes) || scenario.cutoffMinutes < 0 || typeof scenario.legitimate !== 'boolean' || typeof scenario.changedBank !== 'boolean' || typeof scenario.approverAvailable !== 'boolean' || !['match','mismatch','unavailable'].includes(scenario.verification?.outcome) || !Number.isFinite(scenario.verification.minutes) || scenario.verification.minutes < 0) {
+    throw new Error('Unknown or invalid scenario');
   }
-  return {hypothesis, supports, counters, context, active, summary, departments: [...new Set(supports.map(r => r.department))]};
+  return scenario;
 }
 
-export function createBrief(activeIds, hypothesisId, experimentId) {
-  const result = analyse(activeIds, hypothesisId);
-  const experiment = getExperiment(hypothesisId, experimentId);
-  const section = (title, items) => `${title}\n${items.length ? items.map(r => `${r.id} | ${r.source} | ${r.date}\n“${r.excerpt}”`).join('\n\n') : 'None included.'}`;
-  return ['THE UNSEEN ORGANISATION — INVESTIGATION BRIEF',
-    'Fictional case: Northstar Workspace. Prepared AI-assisted analysis; no live model calls. This is an illustrative exercise, not a demand forecast or performance evaluation.',
-    `WORKING HYPOTHESIS\n${result.hypothesis.title}\n${result.summary}`,
-    section('SUPPORTING RECORDS', result.supports), section('CHALLENGING RECORDS', result.counters), section('OTHER INCLUDED CONTEXT', result.context),
-    `EXCLUDED ORIGINAL RECORDS\n${CASE.evidence.filter(r => !result.active.has(r.id)).map(r => r.id).join(', ') || 'None.'}`,
-    `NEXT INVESTIGATION\n${experiment.title}\nQuestion: ${experiment.question}\nAction: ${experiment.action}\nWhat to learn: ${experiment.learn}`,
-    'LIMITS\nSelected synthetic records cannot establish prevalence, causation, commercial viability or AI accuracy. Source counts are not confidence scores. Interpretations and evidence relationships were prepared in advance.',
+export function runScenario(value, selectedControls = DEFAULT_CONTROLS) {
+  const scenario = resolveScenario(value);
+  const controls = normaliseControls(selectedControls);
+  const trace = [];
+  let elapsedMinutes = 0;
+  const step = (stage, title, detail, minutes = 0) => {
+    elapsedMinutes += minutes;
+    trace.push({stage, title, detail, minutes, totalMinutes: elapsedMinutes});
+  };
+  step('request', 'A consistent-looking request arrives', 'The invoice and request records agree. That agreement is available to the workflow; the scenario’s hidden label is not.');
+
+  let action = 'release';
+  let reason = '';
+  let verified = false;
+  if (controls.blanketHold && scenario.changedBank) {
+    step('blanket-hold', 'Account change deferred to tomorrow', 'The blanket policy holds this changed-bank request for 1,440 modelled minutes. No release occurs in this case, and the other selected steps do not override this hold.', 1440);
+    action = 'hold';
+    reason = 'The blanket rule holds every changed-bank request, regardless of its authenticity.';
+  } else {
+    const approvalMinutes = scenario.approverAvailable || controls.deputy ? 10 : 90;
+    const usesDeputy = !scenario.approverAvailable && controls.deputy;
+    step('approval', usesDeputy ? 'Pre-authorised deputy reviews the request' : scenario.approverAvailable ? 'Usual approver reviews the request' : 'Wait for the usual approver', usesDeputy ? 'The authorised deputy accepts the same consistent-looking records. This restores the short approval step; it does not authenticate the account change.' : scenario.approverAvailable ? 'The approver accepts the consistent-looking records in this deliberately simplified baseline process.' : 'The approver is unavailable. After the modelled wait, they accept the consistent-looking records.', approvalMinutes);
+
+    if (controls.independentCheck && scenario.changedBank) {
+      const check = scenario.verification;
+      step('verification', check.outcome === 'match' ? 'A matching confirmation is obtained' : check.outcome === 'mismatch' ? 'Independent confirmation conflicts' : 'Required confirmation is unavailable', check.detail, check.minutes);
+      verified = check.outcome === 'match';
+      if (!verified) {
+        action = 'hold';
+        reason = check.outcome === 'mismatch' ? 'The independently obtained response conflicts with the requested payment or bank details.' : 'The required independent confirmation cannot be obtained. The workflow holds instead of treating missing evidence as approval.';
+      }
+    } else {
+      step('verification', scenario.changedBank ? 'No independent account check required' : 'The account has not changed', scenario.changedBank ? 'The selected design relies on the original records. It obtains no additional evidence that could distinguish the two opening realities.' : 'The changed-bank verification rule does not apply to this unchanged-account request.');
+    }
+
+    if (action === 'release' && controls.extraApproval) {
+      step('extra-approval', 'Another approver reviews the same records', 'The second approver accepts the same record set. This model gives that step no independent distinguishing evidence.', 25);
+    }
+    if (action === 'release') {
+      reason = scenario.changedBank && controls.independentCheck
+        ? 'The required check returned a matching confirmation and the selected approvals completed. That confirmation can still depend on a failed trust assumption.'
+        : 'The selected approvals completed without a required conflicting or missing confirmation.';
+      step('release', 'Payment released in the model', 'Release is the workflow action. Its authenticity and timing are classified separately below.');
+    } else {
+      step('hold', 'Payment held in the model', 'No payment is released. Any later escalation or recovery route lies outside this bounded scenario.');
+    }
+  }
+
+  const withinDeadline = action === 'release' && elapsedMinutes <= scenario.cutoffMinutes;
+  const category = scenario.legitimate
+    ? withinDeadline ? 'justified-yes' : 'missed-legitimate'
+    : action === 'release' ? 'dangerous-yes' : 'protective-hold';
+  return {
+    scenarioId: scenario.id,
+    scenario,
+    action,
+    elapsedMinutes,
+    withinDeadline,
+    category,
+    title: CATEGORY_META[category].title,
+    reason,
+    trace,
+    controls,
+    verified,
+    timingNote: action === 'hold' && controls.blanketHold && scenario.changedBank ? 'Modelled policy deferral; payment remains held.' : action === 'hold' ? 'Time until this modelled hold decision; payment remains held.' : withinDeadline ? 'Released within the modelled cutoff.' : 'Released after the modelled cutoff.'
+  };
+}
+
+function selectedScenarios(ids) {
+  const values = ids === undefined ? CASE.scenarios.map(s => s.id) : [...new Set(ids)];
+  return values.map(resolveScenario);
+}
+
+export function runSuite(controls = DEFAULT_CONTROLS, ids) {
+  const scenarios = selectedScenarios(ids);
+  const results = scenarios.map(scenario => runScenario(scenario, controls));
+  const counts = {justifiedYes: 0, dangerousYes: 0, missedLegitimate: 0, protectiveHold: 0};
+  const keys = {'justified-yes': 'justifiedYes', 'dangerous-yes': 'dangerousYes', 'missed-legitimate': 'missedLegitimate', 'protective-hold': 'protectiveHold'};
+  for (const result of results) counts[keys[result.category]] += 1;
+  return {results, counts, total: results.length, legitimateCount: scenarios.filter(s => s.legitimate).length, diversionCount: scenarios.filter(s => !s.legitimate).length};
+}
+
+export function compareSuite(controls = DEFAULT_CONTROLS, ids) {
+  const baseline = runSuite(DEFAULT_CONTROLS, ids);
+  const current = runSuite(controls, ids);
+  const changes = current.results.map((result, index) => ({scenarioId: result.scenarioId, before: baseline.results[index].category, after: result.category, changed: baseline.results[index].category !== result.category, beforeMinutes: baseline.results[index].elapsedMinutes, afterMinutes: result.elapsedMinutes}));
+  return {baseline, current, changes};
+}
+
+export function createBrief(selectedControls = DEFAULT_CONTROLS, ids) {
+  const controls = normaliseControls(selectedControls);
+  const comparison = compareSuite(controls, ids);
+  const enabled = CASE.controls.filter(c => controls[c.id]);
+  const describeCounts = counts => `Legitimate release on time: ${counts.justifiedYes}\nDangerous yes: ${counts.dangerousYes}\nLegitimate opportunity missed: ${counts.missedLegitimate}\nProtective hold: ${counts.protectiveHold}`;
+  return [
+    'MAKE YES SAFER — CONTROL STRESS TEST',
+    `${CASE.organisation}: a fictional payment workflow. Prepared AI-assisted scenarios, deterministic model, no live model calls and no real payments.`,
+    `SELECTED DESIGN\n${enabled.length ? enabled.map(c => `${c.title}\n${c.description}\nTradeoff: ${c.tradeoff}`).join('\n\n') : 'Baseline process only.'}`,
+    `SCOPE\n${comparison.current.total} selected prepared cases: ${comparison.current.legitimateCount} legitimate requests and ${comparison.current.diversionCount} diversions.\nThese are deliberately selected examples, not estimates of event frequency or control effectiveness.`,
+    `BASELINE OUTCOMES\n${describeCounts(comparison.baseline.counts)}`,
+    `SELECTED DESIGN OUTCOMES\n${describeCounts(comparison.current.counts)}`,
+    `CASE RESULTS\n${comparison.current.results.map(result => `${result.scenarioId} | ${result.scenario.title}\n${result.title}. Action: ${result.action}. Modelled elapsed time: ${result.elapsedMinutes} minutes. Cutoff: ${result.scenario.cutoffMinutes} minutes.\n${result.reason}\nHidden reality: ${result.scenario.truth}\nTrace:\n${result.trace.map(t => `- ${t.title} (+${t.minutes} min; total ${t.totalMinutes} min): ${t.detail}`).join('\n')}`).join('\n\n')}`,
+    'WHAT TO CHALLENGE NEXT\nWhich real evidence distinguishes a justified yes from a dangerous one? Which trust assumptions could fail? Which legitimate requests would the design delay or block? What additional evidence would support a justified change?',
+    `MODEL ASSUMPTIONS AND LIMITS\n${CASE.assumptions.map(value => `- ${value}`).join('\n')}`,
+    'The exercise can expose assumptions in the chosen design. It does not establish real-world safety, saved revenue, reduced loss, comprehensive scenario coverage or an optimal control design. Opportunity costs are illustrated, not valued.',
     'A thought experiment by Dharshun Sri Dharan · AI4U\n#ThinkBeforeYouAI'
   ].join('\n\n');
 }
+

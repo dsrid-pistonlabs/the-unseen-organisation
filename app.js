@@ -1,124 +1,113 @@
-import { CASE } from './data.js';
-import { analyse, createBrief, getExperiment, recordById } from './engine.js';
+import { CASE, CATEGORY_META } from './data.js';
+import { DEFAULT_CONTROLS, runScenario, compareSuite, createBrief, scenarioById } from './engine.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const department = id => CASE.departments.find(d => d.id === id)?.name || id;
-const state = {active: new Set(CASE.evidence.map(r => r.id)), department: 'all', hypothesis: 'pause', guess: null, revealed: false, experiment: 'interviews'};
-const deptIcons = {sales: '↗', support: '↔', operations: '◎', finance: '≋'};
+const state = {controls:{...DEFAULT_CONTROLS}, selected:CASE.openingIds[0], expanded:false, instinct:null, revealed:false};
+const tones = {'justified-yes':'good','dangerous-yes':'bad','missed-legitimate':'warn','protective-hold':'neutral'};
+const metrics = [
+  {key:'justifiedYes',label:'Legitimate, on time',tone:'good'},
+  {key:'dangerousYes',label:'Dangerous releases',tone:'bad'},
+  {key:'missedLegitimate',label:'Legitimate windows missed',tone:'warn'},
+  {key:'protectiveHold',label:'Diversions held',tone:'neutral'}
+];
 let toastTimer;
+const selectedIds = () => state.expanded ? [...CASE.coreIds,...CASE.challengeIds] : CASE.coreIds;
+const badge = result => `<span class="outcome-badge ${tones[result.category]}">${esc(CATEGORY_META[result.category].title)}</span>`;
+const elapsed = result => result.elapsedMinutes===1440?'1 day':`${result.elapsedMinutes} min`;
+const designName = () => Object.values(state.controls).some(Boolean)?'Your selected design':'Existing design';
 
-function sourceButton(record, label = record.id, className = 'evidence-chip') {
-  return `<button class="${className}" data-source="${esc(record.id)}" aria-label="Inspect ${esc(record.id)}: ${esc(record.title)}">${esc(label)}</button>`;
+function traceHtml(result) {
+  return `<ol class="trace-list">${result.trace.map(t=>`<li class="trace-step"><span class="trace-status">${t.totalMinutes===1440?'DAY +1':`T+${t.totalMinutes}m`}</span><div class="trace-detail"><strong>${esc(t.title)}</strong><p>${esc(t.detail)}</p></div></li>`).join('')}</ol>`;
 }
 
-function renderDashboards() {
-  $('#dashboards').innerHTML = CASE.departments.map(d => `<article class="department-card"><h3><span class="dept-icon" aria-hidden="true">${deptIcons[d.id]}</span>${esc(d.name)}</h3><div class="metric">${esc(d.value)}</div><div class="metric-label">${esc(d.metric)}</div><div class="metric-foot"><span class="status-dot" aria-hidden="true"></span>${esc(d.target)} · Met</div><p class="metric-note">${esc(d.note)}</p></article>`).join('');
-  $('#sample-notice').textContent = CASE.sampleNotice;
+function initialise() {
+  const request=scenarioById.get(CASE.openingIds[0]);
+  $('#request-title').textContent='Account change before dispatch';
+  $('#request-text').textContent=`“${request.request}”`;
+  $('#request-facts').innerHTML=request.publicFacts.map((fact,i)=>`<div class="fact"><span class="fact-label">${['SUPPLIER','RECORDS','APPROVAL','DEADLINE'][i]||'VISIBLE FACT'}</span><strong>${esc(fact)}</strong></div>`).join('');
+  $('#request-deadline').textContent=`${request.cutoffMinutes} modelled minutes until the shipment window closes.`;
+  $('#control-options').innerHTML='<legend class="sr-only">Select controls for the proposed design</legend>'+CASE.controls.map(c=>`<label class="control-option"><input type="checkbox" data-control="${c.id}"><span class="control-copy"><strong class="control-title">${esc(c.title)}</strong><span>${esc(c.description)}</span><small class="control-cost">${esc(c.tradeoff)}</small></span></label>`).join('');
+  $('#model-assumptions').innerHTML='<h3>The chosen assumptions</h3><ul>'+CASE.assumptions.map(value=>`<li>${esc(value)}</li>`).join('')+'</ul>';
+  renderResults();
 }
 
-function renderEvidence() {
-  const teams = [{id:'all', name:'All departments'}, ...CASE.departments];
-  $('#team-tabs').innerHTML = teams.map(d => `<button role="tab" class="tab" data-team="${d.id}" aria-selected="${state.department === d.id}" tabindex="${state.department === d.id ? '0' : '-1'}" aria-controls="evidence-grid">${esc(d.name)}</button>`).join('');
-  const visible = CASE.evidence.filter(r => state.department === 'all' || r.department === state.department);
-  $('#evidence-count').textContent = `${visible.length} of ${CASE.evidence.length} original records · ${CASE.evidence.filter(r=>state.active.has(r.id)).length} included`;
-  $('#evidence-grid').setAttribute('role','tabpanel');
-  $('#evidence-grid').setAttribute('aria-label', `${state.department === 'all' ? 'All departments' : department(state.department)} evidence`);
-  $('#evidence-grid').innerHTML = visible.map(r => `<article class="evidence-card ${state.active.has(r.id)?'':'excluded'}"><div class="evidence-meta"><span>${esc(department(r.department))}</span><span class="evidence-id">${r.id}</span></div><p class="evidence-source">${esc(r.source)}</p><h3>${esc(r.title)}</h3><blockquote class="evidence-body">“${esc(r.excerpt)}”</blockquote><div class="evidence-card-actions">${sourceButton(r,'Read source ↗','text-button evidence-read')}<label class="evidence-toggle"><input type="checkbox" data-include="${r.id}" ${state.active.has(r.id)?'checked':''}><span>Include<span class="sr-only"> ${r.id}</span></span></label></div></article>`).join('');
+function renderTwins() {
+  const results=CASE.openingIds.map(id=>runScenario(id,state.controls));
+  $('#twin-grid').innerHTML=results.map(r=>`<article class="twin-card ${r.scenario.legitimate?'good':'bad'}"><p class="twin-label">${r.scenario.legitimate?'WORLD A · GENUINE CHANGE':'WORLD B · ATTEMPTED DIVERSION'}</p><h3>${esc(r.scenario.title)}</h3><p>${esc(r.scenario.truth)}</p><div class="twin-outcome">${badge(r)}<span>${esc(designName())} · ${elapsed(r)}</span></div><p>${esc(r.timingNote)}</p><button class="text-button" data-inspect="${r.scenarioId}">Inspect the decision trace</button></article>`).join('');
+  const [real,diversion]=results;
+  let insight;
+  if(real.withinDeadline&&diversion.action==='hold')insight='In this pair, the selected design preserves the legitimate shipment window and holds the diversion. Inspect which evidence made the difference—and then test the other cases.';
+  else if(diversion.action==='release')insight='The diversion is still released. More timely processing or another signature cannot supply a distinguishing fact that the selected workflow never obtains.';
+  else insight='The diversion is held, but the legitimate shipment window is missed. Protection and the ability to proceed are separate questions in this pair.';
+  $('#twin-insight').textContent=insight;
 }
 
-function renderGuesses() {
-  $('#guess-options').innerHTML = '<legend class="sr-only">Your first hypothesis</legend>' + CASE.hypotheses.map(h => `<label class="guess-option ${state.guess === h.id?'selected':''}"><input type="radio" name="guess" value="${h.id}" ${state.guess === h.id?'checked':''}><span>${esc(h.title)}</span></label>`).join('');
+function summaryColumn(title,suite) {
+  return `<div class="summary-column"><h3 class="summary-title">${title}</h3><div class="summary-values">${metrics.map(m=>`<div class="summary-cell ${m.tone}"><span class="summary-number">${suite.counts[m.key]}</span><span class="summary-label">${m.label}</span></div>`).join('')}</div></div>`;
 }
 
-function connectionGraphic(result) {
-  const locations = [[90,85],[470,85],[90,325],[470,325]];
-  const nodes = CASE.departments.map((d,i) => {
-    const [x,y] = locations[i];
-    const count = result.supports.filter(r=>r.department===d.id).length;
-    const challenge = result.counters.filter(r=>r.department===d.id).length;
-    return `<path d="M${x} ${y}L280 205" fill="none" stroke="${count?'#b4f5d2':'#40515a'}" stroke-width="${count?2:1}" ${count?'':'stroke-dasharray="5 6"'}/><g><rect x="${x-77}" y="${y-39}" width="154" height="78" rx="10" fill="#1d272e" stroke="${count?'#679c86':'#40515a'}"/><text x="${x}" y="${y-8}" text-anchor="middle" fill="#f6f7f0" font-size="16">${esc(d.name)}</text><text x="${x}" y="${y+15}" text-anchor="middle" fill="#b0bdc4" font-size="12">${count} supporting · ${challenge} challenging</text></g>`;
-  }).join('');
-  return `<svg viewBox="0 0 560 410" role="img" aria-labelledby="map-title map-description"><title id="map-title">Evidence across departments</title><desc id="map-description">${result.supports.length} supporting records across ${result.departments.length} departments. ${result.counters.length} challenging records. Source counts are not probabilities.</desc>${nodes}<circle cx="280" cy="205" r="65" fill="#183229" stroke="#b4f5d2"/><text x="280" y="193" text-anchor="middle" fill="#b4f5d2" font-size="13">WORKING</text><text x="280" y="214" text-anchor="middle" fill="#b4f5d2" font-size="13">HYPOTHESIS</text><text x="280" y="237" text-anchor="middle" fill="#c5d2d2" font-size="11">Open to challenge</text></svg>`;
+function comparisonText(comparison) {
+  const before=comparison.baseline.counts,after=comparison.current.counts;
+  const timely=after.justifiedYes-before.justifiedYes;
+  const dangerous=after.dangerousYes-before.dangerousYes;
+  if(!Object.values(state.controls).some(Boolean))return 'Both columns currently use the existing design. Select a control to examine what changes in these same cases.';
+  return `Compared with the existing design: ${Math.abs(timely)} ${timely>=0?'more':'fewer'} legitimate ${Math.abs(timely)===1?'request reaches its window':'requests reach their windows'}; ${Math.abs(dangerous)} ${dangerous<=0?'fewer':'more'} ${Math.abs(dangerous)===1?'diversion is':'diversions are'} released. These are counts within this selected set, not estimated real-world effects.`;
 }
 
-function renderAnalysis() {
-  const result = analyse(state.active,state.hypothesis);
-  $('#lens-tabs').innerHTML = CASE.hypotheses.map(h=>`<button class="lens-tab" role="tab" data-lens="${h.id}" aria-selected="${h.id===state.hypothesis}" tabindex="${h.id===state.hypothesis?'0':'-1'}" aria-controls="analysis-content">${esc(h.title)}</button>`).join('');
-  $('.analysis-grid').id='analysis-content';
-  $('.analysis-grid').setAttribute('role','tabpanel');
-  $('.analysis-grid').setAttribute('aria-label',result.hypothesis.title);
-  $('#connection-graphic').innerHTML = connectionGraphic(result);
-  $('#support-label').textContent = `${result.supports.length} supporting records · ${result.departments.length} departments`;
-  $('#insight-title').textContent = result.hypothesis.title;
-  $('#insight-summary').textContent = result.summary;
-  $('#evidence-chips').innerHTML = result.supports.map(r=>sourceButton(r)).join('');
-  $('#counter-box').innerHTML = `<strong>${result.counters.length} challenging records included</strong><p>${result.counters.length?'Different explanations and sampling limits belong in this picture too. Inspect each source below.':'No included record is marked as challenging this interpretation. Absence of a challenge in this selected set is not confirmation.'}</p><small>Counts describe records. They are not confidence scores.</small>`;
-  const groups = [['Supporting',result.supports],['Challenging',result.counters],['Other context',result.context]];
-  $('#analysis-source-list').innerHTML = groups.flatMap(([label,items])=>items.map(r=>`<div class="source-row"><span class="source-role ${label.toLowerCase().split(' ')[0]}">${label}</span>${sourceButton(r, `${r.id} · ${r.title}`,'text-button')}<span>${esc(department(r.department))}</span></div>`)).join('');
-  $('#new-evidence-grid').innerHTML = CASE.newEvidence.map(r=>`<article class="new-evidence-card ${state.active.has(r.id)?'active':''}"><div class="evidence-meta"><span>${r.id} · ${esc(department(r.department))}</span><span>${state.active.has(r.id)?'INCLUDED':'NEW'}</span></div><h3>${esc(r.title)}</h3><p>${esc(r.impact)}</p><div class="evidence-card-actions">${sourceButton(r,'Inspect source','text-button')}<button class="button secondary" data-new="${r.id}" aria-pressed="${state.active.has(r.id)}">${state.active.has(r.id)?'Remove evidence':'Add evidence'}</button></div></article>`).join('');
-  const additions=CASE.newEvidence.filter(r=>state.active.has(r.id));
-  $('#challenge-status').textContent = additions.length ? `${additions.length} new ${additions.length===1?'record':'records'} included. The interpretation above reflects your current selection.` : 'Start with the wider survey to challenge the size of the apparent opportunity.';
-  renderBrief();
+function renderResults() {
+  const comparison=compareSuite(state.controls,selectedIds());
+  renderTwins();
+  $('#comparison-grid').innerHTML=summaryColumn('Existing design',comparison.baseline)+summaryColumn('Your selected design',comparison.current);
+  $('#summary-explainer').textContent=comparisonText(comparison);
+  $('#scenario-list').innerHTML='<div class="scenario-row scenario-table-head"><span>Prepared scenario</span><span>Existing</span><span>Selected</span></div>'+comparison.current.results.map((r,i)=>`<button class="scenario-row ${state.selected===r.scenarioId?'selected':''}" data-case="${r.scenarioId}" aria-pressed="${state.selected===r.scenarioId}" aria-controls="scenario-detail"><span><strong class="scenario-name">${esc(r.scenario.title)}</strong><small class="scenario-meta">${r.scenarioId} · ${r.scenario.legitimate?'Legitimate request':'Attempted diversion'} · ${r.scenario.cutoffMinutes} min window${r.scenario.group==='challenge'?' · Added challenge':''}</small></span><span>${badge(comparison.baseline.results[i])}</span><span>${badge(r)}</span></button>`).join('');
+  $('#suite-note').textContent=`${comparison.current.total} deliberately selected cases: ${comparison.current.legitimateCount} legitimate requests and ${comparison.current.diversionCount} diversions. Outcomes are classified using the fictional truth after the workflow runs. “Legitimate, on time” does not by itself prove the decision was well-founded.`;
+  $('#challenge-button').textContent=state.expanded?'Return to the initial six cases':'Test the uncomfortable cases';
+  $('#challenge-button').setAttribute('aria-expanded',String(state.expanded));
+  $('#challenge-note').textContent=state.expanded?'The two added cases challenge a missing contact route and a corrupted trusted contact record. They were prepared in advance, not generated live.':'Two further prepared scenarios will test assumptions behind an apparently successful design.';
+  renderDetail();
+  renderFindings(comparison);
 }
 
-function renderBrief() {
-  const result=analyse(state.active,state.hypothesis), action=getExperiment(state.hypothesis,state.experiment);
-  for(const input of document.querySelectorAll('[name="experiment"]')) { const choice=getExperiment(state.hypothesis,input.value); const label=input.closest('label'); label.querySelector('strong').textContent=choice.title; label.querySelector('small').textContent=choice.short || choice.question; }
-  $('#brief-output').innerHTML = `<p class="section-kicker">YOUR INVESTIGATION BRIEF</p><h3>${esc(action.question)}</h3><p>${esc(action.action)}</p><p>${esc(action.learn)}</p><div class="brief-evidence-line">Working hypothesis: <strong>${esc(result.hypothesis.title)}</strong><br>${result.supports.length} supporting · ${result.counters.length} challenging · ${result.context.length} other records</div>`;
+function renderDetail() {
+  const scenario=scenarioById.get(state.selected),before=runScenario(scenario,DEFAULT_CONTROLS),after=runScenario(scenario,state.controls);
+  $('#scenario-detail').innerHTML=`<div class="detail-header"><div><p class="section-kicker">INSPECT THE DECISION · ${scenario.id}</p><h3 id="detail-heading" tabindex="-1">${esc(scenario.title)}</h3></div><span>${scenario.cutoffMinutes} min cutoff</span></div><div class="detail-facts"><div><h4>What the team can see</h4><p>${esc(scenario.request)}</p><ul>${scenario.publicFacts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div><div><h4>Underlying truth, revealed for this exercise</h4><p>${esc(scenario.truth)}</p><p>${esc(scenario.impact)}</p></div></div><div class="trace-compare">${[[before,'Existing design'],[after,'Your selected design']].map(([result,label])=>`<div class="trace-column"><h4>${label}</h4>${badge(result)}<p>${elapsed(result)} · ${esc(result.timingNote)}</p>${traceHtml(result)}<p class="suite-note">${esc(result.reason)}</p></div>`).join('')}</div>`;
 }
 
-function inspect(id) {
-  const r=recordById.get(id); if(!r)return;
-  $('#dialog-meta').textContent=`${r.id} · ${department(r.department)} · ${r.source} · ${r.date}`;
-  $('#dialog-title').textContent=r.title;
-  $('#dialog-body').textContent=r.body;
-  $('#dialog-explanation').innerHTML=`<h3>${esc(r.relationship)}</h3><p>${esc(r.explanation)}</p><p class="sample-note">Synthetic record. This explanation was prepared in advance; it is not a live model response.</p>`;
-  $('#source-dialog').showModal();
+function renderFindings(comparison) {
+  const result=comparison.current,failed=result.results.filter(r=>r.category==='dangerous-yes'),missed=result.results.filter(r=>r.category==='missed-legitimate');
+  let frontier;
+  if(!state.expanded)frontier='<strong>Your conclusion is bounded by the cases you tried.</strong><p>Use “Test the uncomfortable cases” to challenge the contact route that a successful check depends on. A clean result in six selected cases is not permission to generalise.</p>';
+  else if(failed.length)frontier=`<strong>A boundary remains visible.</strong><p>${failed.map(r=>`${esc(r.scenarioId)}: ${esc(r.scenario.title)}`).join('; ')} ${failed.length===1?'still releases a diversion':'still release diversions'} in this design. Inspect the trace and identify the evidence or trust assumption that would need to change.</p>`;
+  else if(missed.length)frontier='<strong>Protection still has an operational consequence.</strong><p>No diversion in this selected set is released, but legitimate requests still miss their window. Some may need another evidence route; a deadline alone cannot justify proceeding.</p>';
+  else frontier='<strong>This selected set is not the boundary of reality.</strong><p>Examine more scenarios and the actual workflow before drawing conclusions about effectiveness.</p>';
+  $('#frontier-note').innerHTML=frontier;
+  $('#brief-findings').innerHTML=`<p>${esc(comparisonText(comparison))}</p><p><strong>${failed.length} dangerous ${failed.length===1?'release remains':'releases remain'}; ${missed.length} legitimate ${missed.length===1?'window is':'windows are'} missed.</strong></p><p>${state.expanded?'Both additional challenges are included.':'The two further challenges have not been included in these results.'}</p><p>Which assumption would you test next? What evidence could distinguish the requests without imposing a delay on every legitimate case?</p>`;
 }
 
-function reveal() {
-  state.revealed=true;
-  state.hypothesis=state.guess||'pause';
-  ['connections','challenge','brief'].forEach(id=>$('#'+id).classList.remove('hidden'));
-  $('#guess-feedback').textContent='Explore all three interpretations. This is an investigation, not a scored test.';
-  $('#reveal-button').textContent='Return to the connections';
-  renderAnalysis();
-  $('#connections').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+function openFutures() {
+  state.revealed=true;for(const id of ['twins','lab','brief'])$('#'+id).classList.remove('hidden');
+  const feedback={approve:'Your first instinct was another signature. Test whether it changes the evidence.',hold:'Your first instinct was to hold. Test what that protects and what it delays.',verify:'You asked for a distinguishing fact. Test which control can produce one.'};
+  $('#first-response').textContent=feedback[state.instinct]||'Compare both worlds, then redesign the controls.';
+  $('#open-futures').textContent='Return to both worlds';
+  $('#twins-heading').setAttribute('tabindex','-1');$('#twins-heading').focus({preventScroll:true});$('#twins').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
 
-function notify(message) {
-  clearTimeout(toastTimer); $('#toast').textContent=message; $('#toast').classList.add('visible');
-  toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4200);
-}
-
-document.addEventListener('click',event=>{
-  const source=event.target.closest('[data-source]'); if(source){inspect(source.dataset.source);return;}
-  const method=event.target.closest('[data-method]'); if(method){$('#method-dialog').showModal();return;}
-  const team=event.target.closest('[data-team]'); if(team){state.department=team.dataset.team;renderEvidence();$(`[data-team="${state.department}"]`).focus({preventScroll:true});return;}
-  const lens=event.target.closest('[data-lens]'); if(lens){state.hypothesis=lens.dataset.lens;renderAnalysis();$(`[data-lens="${state.hypothesis}"]`).focus({preventScroll:true});return;}
-  const addition=event.target.closest('[data-new]'); if(addition){const id=addition.dataset.new;state.active.has(id)?state.active.delete(id):state.active.add(id);renderAnalysis();$(`[data-new="${id}"]`).focus({preventScroll:true});notify(`${id} ${state.active.has(id)?'included':'removed'}. Interpretation updated.`);return;}
-  if(event.target.closest('.dialog-close,.dialog-close-bottom'))event.target.closest('dialog').close();
-});
+function notify(message) {clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').classList.add('visible');toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3500);}
 
 document.addEventListener('change',event=>{
-  if(event.target.matches('[data-include]')){const id=event.target.dataset.include;event.target.checked?state.active.add(id):state.active.delete(id);renderEvidence();renderAnalysis();$(`[data-include="${id}"]`)?.focus({preventScroll:true});}
-  if(event.target.name==='guess'){state.guess=event.target.value;renderGuesses();$(`[name="guess"][value="${state.guess}"]`).focus({preventScroll:true});$('#guess-feedback').textContent='Your first interpretation is selected. Now test it against the wider picture.';}
-  if(event.target.name==='experiment'){state.experiment=event.target.value;renderBrief();}
+  if(event.target.matches('[data-control]')){state.controls[event.target.dataset.control]=event.target.checked;renderResults();}
+  if(event.target.name==='instinct'){state.instinct=event.target.value;$('#first-response').textContent='First instinct recorded. Open the two worlds to examine the decision.';}
 });
-
-document.addEventListener('keydown',event=>{
-  if(!event.target.matches('[role="tab"]') || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
-  event.preventDefault();const tabs=[...event.target.parentElement.querySelectorAll('[role="tab"]')];const current=tabs.indexOf(event.target);const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[next].click();
+document.addEventListener('click',event=>{
+  if(event.target.closest('[data-method]')){$('#method-dialog').showModal();return;}
+  if(event.target.closest('.dialog-close,.dialog-close-bottom')){event.target.closest('dialog').close();return;}
+  const choice=event.target.closest('[data-case],[data-inspect]');
+  if(choice){state.selected=choice.dataset.case||choice.dataset.inspect;renderResults();$('#detail-heading').focus({preventScroll:true});$('#scenario-detail').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
 });
-
-$('#reveal-button').addEventListener('click',reveal);
-$('#download-brief').addEventListener('click',()=>{
-  const url=URL.createObjectURL(new Blob([createBrief(state.active,state.hypothesis,state.experiment)],{type:'text/plain;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='the-unseen-organisation-investigation.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('Your investigation brief is ready to save.');
-});
-$('#reset-case').addEventListener('click',()=>{
-  state.active=new Set(CASE.evidence.map(r=>r.id));state.department='all';state.hypothesis='pause';state.guess=null;state.revealed=false;state.experiment='interviews';
-  ['connections','challenge','brief'].forEach(id=>$('#'+id).classList.add('hidden'));$('#reveal-button').textContent='Reveal the connections';$('#guess-feedback').textContent='You can explore without choosing.';$('[name="experiment"][value="interviews"]').checked=true;renderEvidence();renderGuesses();renderAnalysis();$('#reveal-button').focus({preventScroll:true});$('#case').scrollIntoView();notify('Case reset to the nine original records.');
-});
-
-renderDashboards();renderEvidence();renderGuesses();renderAnalysis();
+$('#open-futures').addEventListener('click',openFutures);
+$('#clear-controls').addEventListener('click',()=>{state.controls={...DEFAULT_CONTROLS};for(const input of document.querySelectorAll('[data-control]'))input.checked=false;renderResults();notify('Controls returned to the existing design.');});
+$('#challenge-button').addEventListener('click',()=>{state.expanded=!state.expanded;if(!selectedIds().includes(state.selected))state.selected=CASE.openingIds[0];renderResults();notify(state.expanded?'Two prepared challenges added to both designs.':'Returned to the initial six cases.');});
+$('#download-brief').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([createBrief(state.controls,selectedIds())],{type:'text/plain;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='make-yes-safer-rehearsal.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('Your rehearsal brief is ready to save.');});
+$('#reset-case').addEventListener('click',()=>{Object.assign(state,{controls:{...DEFAULT_CONTROLS},selected:CASE.openingIds[0],expanded:false,instinct:null,revealed:false});for(const input of document.querySelectorAll('[data-control],[name="instinct"]'))input.checked=false;for(const id of ['twins','lab','brief'])$('#'+id).classList.add('hidden');$('#open-futures').textContent='Open both possible worlds';$('#first-response').textContent='You can explore without choosing.';renderResults();$('#open-futures').focus({preventScroll:true});$('#request').scrollIntoView();notify('Rehearsal reset.');});
+initialise();
